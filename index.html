@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced JavaScript Object Evaluator with Sandbox</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 800px;
+            color: #333;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        label,
+        input,
+        button,
+        textarea {
+            display: block;
+            margin: 10px 0;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #output,
+        #codeOutput,
+        #sandbox {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        #sandbox {
+            max-height: none;
+            min-height: 200px;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .filter {
+            margin: 10px 0;
+        }
+
+        #darkModeToggle {
+            margin-top: 10px;
+        }
+
+        .dark-mode {
+            background-color: #222;
+            color: white;
+        }
+
+        .dark-mode #output,
+        .dark-mode #codeOutput,
+        .dark-mode #sandbox {
+            background-color: #444;
+            border-color: #555;
+        }
+
+        .dark-mode button {
+            background-color: #555;
+        }
+
+        .dark-mode button:hover {
+            background-color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Enhanced JavaScript Object Evaluator with Sandbox</h1>
+
+    <!-- Object Evaluator Section -->
+    <label for="objectInput">Enter JavaScript Object (e.g., document, window, etc.):</label>
+    <input type="text" id="objectInput" placeholder="Type object reference here" />
+    <div class="filter">
+        <label><input type="radio" name="filter" value="all" checked> Show All</label>
+        <label><input type="radio" name="filter" value="properties"> Show Only Properties</label>
+        <label><input type="radio" name="filter" value="methods"> Show Only Methods</label>
+    </div>
+    <button onclick="evaluateObject()">Evaluate</button>
+
+    <!-- Code Execution Section -->
+    <label for="codeInput">Enter JavaScript Code to Execute:</label>
+    <textarea id="codeInput" rows="5" placeholder="Type JavaScript code here..."></textarea>
+    <button onclick="executeCode()">Execute Code</button>
+
+    <!-- Sandbox Div -->
+    <h2>Sandbox Area (DOM Manipulation)</h2>
+    <div id="sandbox"></div>
+
+    <!-- Output Areas -->
+    <button id="darkModeToggle" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+
+    <div id="output"></div>
+    <div id="codeOutput"></div>
+
+    <script>
+        // Function to evaluate object properties and methods
+        function evaluateObject() {
+            const input = document.getElementById('objectInput').value;
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = ''; // Clear previous output
+
+            const filter = document.querySelector('input[name="filter"]:checked').value;
+
+            try {
+                const obj = eval(input); // Evaluate the object from input
+
+                if (obj) {
+                    const properties = [];
+                    const methods = [];
+                    const protoProperties = [];
+
+                    // Loop through the object's own properties and methods
+                    for (let key in obj) {
+                        if (typeof obj[key] === 'function') {
+                            methods.push({ name: key, type: 'method' });
+                        } else {
+                            properties.push({ name: key, type: typeof obj[key] });
+                        }
+                    }
+
+                    // Get prototype properties and methods
+                    const prototypeProps = Object.getOwnPropertyNames(Object.getPrototypeOf(obj));
+                    prototypeProps.forEach(name => {
+                        protoProperties.push({ name, type: typeof obj[name] });
+                    });
+
+                    if (filter === 'all' || filter === 'properties') {
+                        outputDiv.innerHTML += 'Properties:\n' + properties.map(p => `${p.name} (${p.type})`).join('\n') + '\n\n';
+                    }
+                    if (filter === 'all' || filter === 'methods') {
+                        outputDiv.innerHTML += 'Methods:\n' + methods.map(m => `${m.name} (method)`).join('\n') + '\n\n';
+                    }
+
+                    outputDiv.innerHTML += 'Prototype Properties & Methods:\n' + protoProperties.map(pp => `${pp.name} (${pp.type})`).join('\n');
+
+                } else {
+                    outputDiv.innerHTML = 'No object found!';
+                }
+            } catch (error) {
+                outputDiv.innerHTML = '<span class="error">Error: Invalid input or object does not exist.</span>';
+            }
+        }*12    2`  
+
+        // Function to execute JavaScript code and manipulate the sandbox div
+        function executeCode() {
+            const code = document.getElementById('codeInput').value;
+            const codeOutputDiv = document.getElementById('codeOutput');
+            const sandbox = document.getElementById('sandbox');
+
+            // Clear previous outputs
+            codeOutputDiv.innerHTML = '';
+            sandbox.innerHTML = '';
+
+            try {
+                // Split code into segments based on semicolons or newlines
+                const statements = code.split(/[\n;]/).filter(Boolean);  // Split by \n or ; and remove empty entries
+
+                // Get the last statement for evaluation
+                const lastStatement = statements[statements.length - 1].trim();
+
+                // Wrap the code inside an IIFE to execute all code and return the last statement's result
+                const result = new Function('sandbox', `
+            with(sandbox) {
+                (function() { 
+                    ${code};  // Execute all user code
+                })();
+                return eval(${JSON.stringify(lastStatement)});  // Return the result of the last statement
+            }
+        `)(sandbox);
+
+                codeOutputDiv.innerHTML = result !== undefined ? 'Result: ' + result : 'Code executed successfully.';
+            } catch (error) {
+                codeOutputDiv.innerHTML = '<span class="error">Error: ' + error.message + '</span>';
+            }
+        }
+
+        const code = document.getElementById('codeInput').value;
+        const codeOutputDiv = document.getElementById('codeOutput');
+        const sandbox = document.getElementById('sandbox');
+
+        // Clear previous outputs
+        codeOutputDiv.innerHTML = '';
+        sandbox.innerHTML = '';
+
+        // Try to run the input code inside the sandbox
+        try {
+            // Wrap the code inside an IIFE to return the value of the last expression
+            const result = new Function('sandbox', `
+                with(sandbox) {
+                    return (function() { 
+                        ${code}; 
+                        return eval(${JSON.stringify(code.split('\n').pop())});
+                    })();
+                }
+            `)(sandbox);
+
+            codeOutputDiv.innerHTML = result !== undefined ? 'Result: ' + result : 'Code executed successfully.';
+        } catch (error) {
+            codeOutputDiv.innerHTML = '<span class="error">Error: ' + error.message + '</span>';
+        }
+
+        // Function to toggle dark mode
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+    </script>
+
+</body>
+
+</html>
